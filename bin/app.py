@@ -87,4 +87,4 @@ if __name__ == '__main__':
     # news_clustring()
     # save_to_db()  # 실행 시 DB 저장
     # scheduled_task()
-    app.run(debug=True, use_reloader=False, port=5001)
+    app.run(host='0.0.0.0', use_reloader=False, port=5000)
