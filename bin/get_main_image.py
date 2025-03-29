@@ -14,12 +14,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # 메인 이미지 가져오는 함수
 def get_main_image(url):
+    chrome_driver_path = os.getenv("CHROME_DRIVER_PATH")
     # 셀레니움 설정 (Chrome Headless 모드 사용)
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    service = Service('/opt/homebrew/bin/chromedriver')  # chromedriver 경로 설정
+    service = Service(chrome_driver_path)  # chromedriver 경로 설정
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
@@ -40,6 +41,8 @@ def get_main_image(url):
 def download_image(url):
     base_url = os.getenv("BASE_URL")
     image_url = get_main_image(url)
+    if not image_url:
+        return None
     try:
         # 이미지 요청
         response = requests.get(image_url, stream=True)

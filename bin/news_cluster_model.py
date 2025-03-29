@@ -158,9 +158,13 @@ def news_clustring():
             orient='records')
 
         main_image = None
+
         if articles_list:
-            first_article_link = articles_list[0]['link']
-            main_image = download_image(first_article_link)
+            for article in articles_list:
+                first_article_link = article['link']
+                main_image = download_image(first_article_link)
+                if main_image:
+                    break
 
         # 최종 구조
         clustered_data[cluster_num] = {

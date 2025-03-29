@@ -84,7 +84,7 @@ def scrape_news_content():
 
     print(f"\n🎉 총 {len(news_data)}개의 뉴스 크롤링 완료!")
 
-    csv_filename = "news_data_politic1.csv"
+    csv_filename = "news_data_politic.csv"
     df = pd.DataFrame(news_data)
     df.to_csv(csv_filename, index=False, encoding="utf-8-sig")  # 한글 깨짐 방지
 
