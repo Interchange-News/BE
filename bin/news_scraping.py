@@ -38,6 +38,7 @@ def scrape_news_content():
             for news in news_list:
                 title = news["title"]  # 뉴스 제목
                 link = news["link"]  # 뉴스 링크
+                description = news['description']
 
                 # 네이버 뉴스만 크롤링
                 if link.startswith("https://n.news.naver.com"):
@@ -68,6 +69,7 @@ def scrape_news_content():
                                 "originallink": news['originallink'],
                                 "link": news["link"],
                                 "pubDate": news['pubDate'],
+                                "description": description
                             })
 
                             print(f"✅ 크롤링 완료: {title} ({press_name})")
@@ -76,7 +78,7 @@ def scrape_news_content():
                     except Exception as e:
                         print(f"❌ 크롤링 실패: {link} - {e}")
 
-                time.sleep(0.5)  # 크롤링 간격 조정 (서버 차단 방지)
+                time.sleep(0.1)  # 크롤링 간격 조정 (서버 차단 방지)
         else:
             print(f"❌ API 요청 실패! 상태 코드: {response.status_code}")
 
