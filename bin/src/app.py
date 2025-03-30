@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, jsonify
 import sqlite3
 import pandas as pd
@@ -5,12 +7,14 @@ import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from news_cluster_model import news_clustring
 from news_scraping import scrape_news_content
-import time
+from flask import Flask, send_from_directory
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-DB_FILE = "news_clusters.db"  # SQLite 데이터베이스 파일 이름
-CSV_FILE = "final_result_preprocessed.csv"  # 저장된 클러스터링 결과 파일
+DB_FILE = "../news_clusters.db"  # SQLite 데이터베이스 파일 이름
+CSV_FILE = "../final_result_preprocessed.csv"  # 저장된 클러스터링 결과 파일
+UPLOAD_FOLDER = "static/images"
 
 
 # SQLite 데이터베이스에 클러스터링 결과 저장
@@ -64,11 +68,15 @@ def save_to_db():
 # 뉴스 클러스터링 결과 조회 API
 @app.route('/news', methods=['GET'])
 def get_news():
-    json_filename = "news_clusters.json"
+    json_filename = "../news_clusters.json"
     with open(json_filename, 'r', encoding='utf-8') as f:
         loaded_data = json.load(f)
     # JSON 응답에서도 ensure_ascii=False 적용
     return jsonify(loaded_data)
+
+@app.route("/images/<filename>")
+def serve_image(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 def scheduled_task():
     print("⏳ 12시간마다 실행되는 작업 시작...")
@@ -79,7 +87,18 @@ def scheduled_task():
 
 # 스케줄러 실행
 scheduler = BackgroundScheduler()
-scheduler.add_job(scheduled_task, 'interval', hours=12)
+
+
+# 현재 시간을 기준으로 다음 12:00 설정
+now = datetime.now()
+next_run = now.replace(hour=12, minute=0, second=0, microsecond=0)
+
+# 만약 현재 시간이 12시 이후라면 다음 날 12시로 설정
+if now >= next_run:
+    next_run += timedelta(days=1)
+
+# 스케줄러에 작업 추가 (12시부터 시작, 이후 12시간 간격 실행)
+scheduler.add_job(scheduled_task, 'interval', hours=12, next_run_time=next_run)
 scheduler.start()
 
 if __name__ == '__main__':
@@ -87,4 +106,4 @@ if __name__ == '__main__':
     # news_clustring()
     # save_to_db()  # 실행 시 DB 저장
     # scheduled_task()
-    app.run(debug=True, use_reloader=False, port=5001)
+    app.run(host='0.0.0.0', use_reloader=False, port=5000)

@@ -1,5 +1,4 @@
 import json
-
 from konlpy.tag import Okt
 import pandas as pd
 from tqdm import tqdm
@@ -7,13 +6,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import DBSCAN
 import numpy as np
 import re
-import requests
+from get_main_image import download_image
 
 def news_clustring():
     # 불용어 리스트 정의 (한국어 일반적인 불용어)
     stopwords = ['이', '그', '저', '것', '수', '등', '및', '더', '를', '에', '의', '가', '을', '는', '은', '로', '으로', '에서', '있다', '하다',
                  '이다', '또', '또한']
-
 
     # 전처리 함수 정의
     def preprocess_text(text):
@@ -37,8 +35,8 @@ def news_clustring():
 
     # 데이터 로드
     chunks = []
-    for chunk in pd.read_csv('news_data_politic.csv',
-                             usecols=['title', 'article', 'pressName', 'originallink', 'link', 'pubDate'],
+    for chunk in pd.read_csv('../news_data_politic.csv',
+                             usecols=['title', 'article', 'pressName', 'originallink', 'link', 'pubDate', 'description'],
                              encoding='UTF-8',
                              chunksize=1000):
         chunks.append(chunk)
@@ -88,7 +86,7 @@ def news_clustring():
     print("TF-IDF 벡터화 중...")
     text = [" ".join(noun) for noun in df['nouns']]
 
-    tfidf_vectorizer = TfidfVectorizer(min_df=5, max_df=0.9, ngram_range=(1, 3))
+    tfidf_vectorizer = TfidfVectorizer(min_df=5, ngram_range=(1, 5))
     tfidf_vectorizer.fit(text)
     vector = tfidf_vectorizer.transform(text).toarray()
 
@@ -126,7 +124,6 @@ def news_clustring():
             top_indices = cluster_avg_vector.argsort()[-10:][::-1]
             feature_names = tfidf_vectorizer.get_feature_names_out()
             top_keywords = [feature_names[i] for i in top_indices]
-
             print(f"주요 키워드: {', '.join(top_keywords)}")
 
             # 샘플 기사 제목 (최대 5개)
@@ -143,27 +140,6 @@ def news_clustring():
 
     clustered_data = {}
 
-    # for cluster_num in sorted_clusters:
-    #     cluster_num = cluster_num[0]  # (클러스터 번호, 크기)에서 번호만 가져옴
-    #
-    #     # 각 클러스터의 주요 키워드 추출
-    #     cluster_indices = temp_df.index.tolist()
-    #     cluster_vectors = vector[cluster_indices]
-    #     cluster_avg_vector = np.mean(cluster_vectors, axis=0)
-    #
-    #     top_indices = cluster_avg_vector.argsort()[-10:][::-1]
-    #     feature_names = tfidf_vectorizer.get_feature_names_out()
-    #     top_keywords = [feature_names[i] for i in top_indices]
-    #
-    #     # 클러스터에 속한 기사들 정리
-    #     articles_list = temp_df[['title', 'article', 'pressName', 'originallink', 'link', 'pubDate']].to_dict(
-    #         orient='records')
-    #
-    #     # 최종 구조
-    #     clustered_data[cluster_num] = {
-    #         "keywords": top_keywords,
-    #         "articles": articles_list
-    #     }
     for cluster_num, cluster_size in sorted_clusters:
         # 특정 클러스터의 데이터 필터링
         temp_df = df[df['result'] == cluster_num]
@@ -178,13 +154,23 @@ def news_clustring():
         top_keywords = [feature_names[i] for i in top_indices]
 
         # 클러스터에 속한 기사들 정리
-        articles_list = temp_df[['title', 'article', 'pressName', 'originallink', 'link', 'pubDate']].to_dict(
+        articles_list = temp_df[['title', 'pressName', 'originallink', 'link', 'pubDate', 'description']].to_dict(
             orient='records')
+
+        main_image = None
+
+        if articles_list:
+            for article in articles_list:
+                first_article_link = article['link']
+                main_image = download_image(first_article_link)
+                if main_image:
+                    break
 
         # 최종 구조
         clustered_data[cluster_num] = {
             "keywords": top_keywords,
-            "articles": articles_list
+            "articles": articles_list,
+            "mainImage": main_image
         }
 
         def convert_numpy_types(obj):
@@ -202,7 +188,7 @@ def news_clustring():
         # 변환된 데이터 저장
         converted_clustered_data = convert_numpy_types(clustered_data)
 
-        json_filename = "news_clusters.json"
+        json_filename = "../news_clusters.json"
         with open(json_filename, 'w', encoding='utf-8') as f:
             json.dump(converted_clustered_data, f, ensure_ascii=False, indent=4)
         print(f"클러스터링 결과가 '{json_filename}' 파일로 저장되었습니다.")
@@ -211,6 +197,6 @@ def news_clustring():
     filtered_df = df[(df['result'] != -1) & (df['result'] != 0)]
     # 결과 저장
     print("\n결과 저장 중...")
-    csv_filename = "final_result_preprocessed.csv"
+    csv_filename = "../final_result_preprocessed.csv"
     filtered_df.to_csv(csv_filename, index=False, encoding="utf-8-sig")
     print(f"데이터가 '{csv_filename}' 파일로 저장되었습니다.")
