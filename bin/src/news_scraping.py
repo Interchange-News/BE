@@ -21,10 +21,10 @@ HEADERS = {
 news_data = []
 
 def scrape_news_content():
-    for start in range(1, 51, 10):
+    for start in range(1, 101, 100):
         params = {
             "query": "정치",
-            "display": 10,
+            "display": 100,
             "start": start,
             "sort": "date"
         }
@@ -84,7 +84,7 @@ def scrape_news_content():
 
     print(f"\n🎉 총 {len(news_data)}개의 뉴스 크롤링 완료!")
 
-    csv_filename = "news_data_politic.csv"
+    csv_filename = "../news_data_politic.csv"
     df = pd.DataFrame(news_data)
     df.to_csv(csv_filename, index=False, encoding="utf-8-sig")  # 한글 깨짐 방지
 

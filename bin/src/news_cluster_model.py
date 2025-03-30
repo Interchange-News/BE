@@ -35,8 +35,8 @@ def news_clustring():
 
     # 데이터 로드
     chunks = []
-    for chunk in pd.read_csv('news_data_politic.csv',
-                             usecols=['title', 'article', 'pressName', 'originallink', 'link', 'pubDate'],
+    for chunk in pd.read_csv('../news_data_politic.csv',
+                             usecols=['title', 'article', 'pressName', 'originallink', 'link', 'pubDate', 'description'],
                              encoding='UTF-8',
                              chunksize=1000):
         chunks.append(chunk)
@@ -86,7 +86,7 @@ def news_clustring():
     print("TF-IDF 벡터화 중...")
     text = [" ".join(noun) for noun in df['nouns']]
 
-    tfidf_vectorizer = TfidfVectorizer(min_df=5, max_df=0.9, ngram_range=(1, 3))
+    tfidf_vectorizer = TfidfVectorizer(min_df=5, ngram_range=(1, 5))
     tfidf_vectorizer.fit(text)
     vector = tfidf_vectorizer.transform(text).toarray()
 
@@ -154,7 +154,7 @@ def news_clustring():
         top_keywords = [feature_names[i] for i in top_indices]
 
         # 클러스터에 속한 기사들 정리
-        articles_list = temp_df[['title', 'pressName', 'originallink', 'link', 'pubDate']].to_dict(
+        articles_list = temp_df[['title', 'pressName', 'originallink', 'link', 'pubDate', 'description']].to_dict(
             orient='records')
 
         main_image = None
@@ -188,7 +188,7 @@ def news_clustring():
         # 변환된 데이터 저장
         converted_clustered_data = convert_numpy_types(clustered_data)
 
-        json_filename = "news_clusters.json"
+        json_filename = "../news_clusters.json"
         with open(json_filename, 'w', encoding='utf-8') as f:
             json.dump(converted_clustered_data, f, ensure_ascii=False, indent=4)
         print(f"클러스터링 결과가 '{json_filename}' 파일로 저장되었습니다.")
@@ -197,6 +197,6 @@ def news_clustring():
     filtered_df = df[(df['result'] != -1) & (df['result'] != 0)]
     # 결과 저장
     print("\n결과 저장 중...")
-    csv_filename = "final_result_preprocessed.csv"
+    csv_filename = "../final_result_preprocessed.csv"
     filtered_df.to_csv(csv_filename, index=False, encoding="utf-8-sig")
     print(f"데이터가 '{csv_filename}' 파일로 저장되었습니다.")

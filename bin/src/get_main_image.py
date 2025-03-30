@@ -11,6 +11,9 @@ from werkzeug.utils import secure_filename
 # 저장할 폴더 설정
 UPLOAD_FOLDER = "static/images"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+}
 
 # 메인 이미지 가져오는 함수
 def get_main_image(url):
@@ -24,6 +27,7 @@ def get_main_image(url):
     driver = webdriver.Chrome(service=service, options=chrome_options)
 
     try:
+        driver.set_page_load_timeout(10)
         driver.get(url)
         time.sleep(2)  # 페이지 로딩 대기
 
@@ -45,7 +49,7 @@ def download_image(url):
         return None
     try:
         # 이미지 요청
-        response = requests.get(image_url, stream=True)
+        response = requests.get(image_url, headers=headers, timeout=10, allow_redirects=False)
         if response.status_code == 200:
             filename = secure_filename(image_url.split("/")[-1].split("?")[0])  # 파일명 안전하게 변경
             filepath = os.path.join(UPLOAD_FOLDER, filename)
@@ -57,7 +61,7 @@ def download_image(url):
 
             return f"{base_url}/images/{filename}"
 
-        return "Failed to download image", 400
+        return None
 
     except Exception as e:
-        return f"Error: {e}", 500
+        return None
