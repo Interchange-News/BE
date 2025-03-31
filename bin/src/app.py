@@ -9,12 +9,14 @@ from news_cluster_model import news_clustring
 from news_scraping import scrape_news_content
 from flask import Flask, send_from_directory
 from datetime import datetime, timedelta
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
-DB_FILE = "../news_clusters.db"  # SQLite 데이터베이스 파일 이름
-CSV_FILE = "../final_result_preprocessed.csv"  # 저장된 클러스터링 결과 파일
-UPLOAD_FOLDER = "static/images"
+DB_FILE = "../../news_clusters.db"  # SQLite 데이터베이스 파일 이름
+CSV_FILE = "../../final_result_preprocessed.csv"  # 저장된 클러스터링 결과 파일
+UPLOAD_FOLDER = "../static/images"
 
 
 # SQLite 데이터베이스에 클러스터링 결과 저장
@@ -106,4 +108,4 @@ if __name__ == '__main__':
     # news_clustring()
     # save_to_db()  # 실행 시 DB 저장
     # scheduled_task()
-    app.run(host='0.0.0.0', use_reloader=False, port=5000)
+    app.run(host='0.0.0.0', use_reloader=False, port=5001)
