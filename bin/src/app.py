@@ -84,7 +84,7 @@ def scheduled_task():
     print("⏳ 12시간마다 실행되는 작업 시작...")
     scrape_news_content()
     news_clustring()
-    save_to_db()
+    # save_to_db()
     print("✅ 12시간마다 실행되는 작업 완료!")
 
 # 스케줄러 실행
@@ -105,7 +105,7 @@ scheduler.start()
 
 if __name__ == '__main__':
     # scrape_news_content()
-    # news_clustring()
+    news_clustring()
     # save_to_db()  # 실행 시 DB 저장
-    # scheduled_task()
+    #scheduled_task()
     app.run(host='0.0.0.0', use_reloader=False, port=5001)
