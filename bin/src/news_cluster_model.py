@@ -7,12 +7,27 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 import re
 from get_main_image import download_image
+from datetime import datetime
+import os
+import glob
 
 
-def news_clustring():
+def news_clustering():
     # 불용어 리스트 정의 (한국어 일반적인 불용어)
-    stopwords = ['이', '그', '저', '것', '수', '등', '및', '더', '를', '에', '의', '가', '을', '는', '은', '로', '으로', '에서', '있다', '하다',
-                 '이다', '또', '또한']
+    stopwords = ['이', '그', '저', '것', '수', '등', '및', '더', '를', '에', '의', '가', '을', '는', '은', '로', '으로',
+                 '에서', '있다', '하다', '이다', '또', '또한', '그리고', '한', '위', '때', '나', '너', '우리', '그들',
+                 '것은', '데', '거', '끼', '들', '게', '여기', '저기', '같은', '매우', '무슨', '같이', '바로', '보다',
+                 '어떤', '예', '때문', '이런', '저런', '그런', '좀', '많이', '적', '큰', '작은', '이미', '중', '현재',
+                 '후', '앞', '오늘', '어제', '내일', '언제', '당신', '왜', '특히', '현', '다른', '새로운', '일부', '대한',
+                 '어느', '지금', '속', '통해', '통한', '다음', '계속', '일단', '함께', '역시', '으로서', '기자', '대해',
+                 '그것', '이것', '저것', '뭐', '누구', '어디', '언제', '어떻게', '왜', '무엇', '얼마나', '만큼',
+                 '이번', '어느', '어떠한', '그런', '이런', '저런', '그렇게', '이렇게', '저렇게',
+                 '있는', '없는', '하는', '되는', '있을', '없을', '하지', '되지', '않은', '않는',
+                 '통해', '위해', '대해', '때문에', '의해', '따라', '따른', '관한', '관한', '대한', '있어',
+                 '모든', '일부', '많은', '다른', '어떤', '이러한', '그러한', '저러한', '각각', '서로',
+                 '때', '경우', '때문', '오늘', '내일', '어제', '이후', '이전', '지금', '최근', '당시',
+                 '처음', '마지막', '매우', '너무', '정말', '더욱', '계속', '항상', '자주', '대부분', '전혀',
+                 '관련', '내용', '제목', '기사', '뉴스', '말', '개', '명', '건', '개월', '년', '일', '월', '시간']
 
     # 전처리 함수 정의
     def preprocess_text(text):
@@ -30,6 +45,10 @@ def news_clustring():
 
         # 여러 개의 공백을 하나로 치환
         text = re.sub(r'\s+', ' ', text)
+
+        # 이메일, URL 제거
+        text = re.sub(r'\S+@\S+', '', text)
+        text = re.sub(r'http\S+', '', text)
 
         return text.strip()
 
@@ -94,7 +113,7 @@ def news_clustring():
 
     # DBSCAN 클러스터링
     print("클러스터링 중...")
-    model = DBSCAN(eps=0.6, min_samples=10, metric="cosine")
+    model = DBSCAN(eps=0.6, min_samples=7, metric="cosine")
     result = model.fit_predict(vector)
     df['result'] = result
     df['result'] = df['result'].astype(int)
@@ -141,6 +160,16 @@ def news_clustring():
         print(f"클러스터 {cluster_num}: {size}개 기사")
 
     clustered_data = {}
+
+    # 기존 이미지 삭제
+    image_files = glob.glob("../static/images/*")  # 모든 파일을 대상으로 변경
+
+    for image_file in image_files:
+        if os.path.isfile(image_file):  # 파일인 경우에만 삭제
+            try:
+                os.remove(image_file)
+            except Exception as e:
+                print(f"파일 삭제 중 오류 발생: {e}")
 
     for cluster_num, cluster_size in sorted_clusters:
         # 특정 클러스터의 데이터 필터링
@@ -191,10 +220,11 @@ def news_clustring():
         for cluster_num, cluster_data in clustered_data.items():
             # Add the cluster number to each item
             cluster_item = cluster_data.copy()
-            cluster_item['cluster_id'] = cluster_num
+            # cluster_item['cluster_id'] = cluster_num
             clustered_data_list.append(cluster_item)
 
-        final_data_structure = {"data": clustered_data_list}
+        final_data_structure = {"updatedAt": datetime.now(
+        ).isoformat(), "data": clustered_data_list}
         converted_clustered_data = convert_numpy_types(final_data_structure)
         # 변환된 데이터 저장
         # converted_clustered_data = convert_numpy_types(clustered_data)

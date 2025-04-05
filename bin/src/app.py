@@ -5,7 +5,7 @@ import sqlite3
 import pandas as pd
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
-from news_cluster_model import news_clustring
+from news_cluster_model import news_clustering
 from news_scraping import scrape_news_content
 from flask import Flask, send_from_directory
 from datetime import datetime, timedelta
@@ -85,7 +85,7 @@ def serve_image(filename):
 def scheduled_task():
     print("⏳ 12시간마다 실행되는 작업 시작...")
     scrape_news_content()
-    news_clustring()
+    news_clustering()
     # save_to_db()
     print("✅ 12시간마다 실행되는 작업 완료!")
 
@@ -108,7 +108,7 @@ scheduler.start()
 
 if __name__ == '__main__':
     # scrape_news_content()
-    news_clustring()
+    news_clustering()
     # save_to_db()  # 실행 시 DB 저장
     # scheduled_task()
     app.run(host='0.0.0.0', use_reloader=False, port=5001)
