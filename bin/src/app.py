@@ -112,7 +112,7 @@ if now >= next_run:
     next_run += timedelta(days=1)
 
 # 스케줄러에 작업 추가 (12시부터 시작, 이후 12시간 간격 실행)
-scheduler.add_job(scheduled_task, 'interval', hours=12, next_run_time=next_run)
+scheduler.add_job(scheduled_task, 'interval', hours=8, next_run_time=next_run)
 scheduler.start()
 
 
@@ -161,4 +161,4 @@ if __name__ == '__main__':
     # news_clustering()
     # save_to_db()  # 실행 시 DB 저장
     # scheduled_task()
-    app.run(host='0.0.0.0', use_reloader=False, port=5001)
+    app.run(host='0.0.0.0', use_reloader=False, port=os.getenv('PORT'))

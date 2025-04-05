@@ -22,7 +22,7 @@ news_data = []
 
 
 def scrape_news_content():
-    for start in range(1, 101, 100):
+    for start in range(1, 2001, 100):
         params = {
             "query": "정치",
             "display": 100,
