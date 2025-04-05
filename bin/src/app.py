@@ -1,9 +1,8 @@
 import os
-
-from flask import Flask, jsonify
+import json
+from flask import Flask, jsonify, request
 import sqlite3
 import pandas as pd
-import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from news_cluster_model import news_clustering
 from news_scraping import scrape_news_content
@@ -11,15 +10,25 @@ from flask import Flask, send_from_directory
 from datetime import datetime, timedelta
 from flask_cors import CORS
 
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 DB_FILE = "../../news_clusters.db"  # SQLite 데이터베이스 파일 이름
 CSV_FILE = "../../final_result_preprocessed.csv"  # 저장된 클러스터링 결과 파일
 UPLOAD_FOLDER = "../static/images"
+BIAS_REQUESTS_FILE = "../press_bias_requests.json"
+
+# JSON 파일이 없으면 생성
+if not os.path.exists(BIAS_REQUESTS_FILE):
+    os.makedirs(os.path.dirname(BIAS_REQUESTS_FILE), exist_ok=True)
+    with open(BIAS_REQUESTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump([], f, ensure_ascii=False)
 
 
 # SQLite 데이터베이스에 클러스터링 결과 저장
+
+
 def save_to_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -106,9 +115,50 @@ if now >= next_run:
 scheduler.add_job(scheduled_task, 'interval', hours=12, next_run_time=next_run)
 scheduler.start()
 
+
+@app.route('/press-bias-request', methods=['POST'])
+def submit_press_bias():
+    try:
+        data = request.json
+        print(f"Received data: {data}")  # 디버깅용 로그
+
+        # 현재 시간을 ISO 형식으로 변환
+        data['created_at'] = datetime.now().isoformat()
+
+        # 기존 데이터 읽기
+        try:
+            with open(BIAS_REQUESTS_FILE, 'r', encoding='utf-8') as f:
+                requests = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            requests = []
+
+        # 새 요청 추가
+        requests.append(data)
+
+        # 파일에 저장
+        with open(BIAS_REQUESTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(requests, f, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            'success': True,
+            'message': '편향성 피드백이 성공적으로 저장되었습니다.',
+            'data': data
+        }), 201
+
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        print(f"Error: {error_msg}")  # 디버깅용 로그
+        return jsonify({
+            'success': False,
+            'message': f'오류가 발생했습니다: {str(e)}',
+            'error_details': error_msg
+        }), 500
+
+
 if __name__ == '__main__':
     # scrape_news_content()
-    news_clustering()
+    # news_clustering()
     # save_to_db()  # 실행 시 DB 저장
     # scheduled_task()
     app.run(host='0.0.0.0', use_reloader=False, port=5001)
