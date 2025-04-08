@@ -162,8 +162,7 @@ def news_clustering():
     clustered_data = {}
 
     # 기존 이미지 삭제
-    image_files = glob.glob("../static/images/*")  # 모든 파일을 대상으로 변경
-
+    image_files = glob.glob("../static/images/*")
     for image_file in image_files:
         if os.path.isfile(image_file):  # 파일인 경우에만 삭제
             try:
@@ -192,10 +191,14 @@ def news_clustering():
 
         if articles_list:
             for article in articles_list:
-                first_article_link = article['link']
-                main_image = download_image(first_article_link)
-                if main_image:
-                    break
+                try:
+                    first_article_link = article['link']
+                    main_image = download_image(first_article_link)
+                    if main_image:
+                        break
+                except Exception as e:
+                    print(f"이미지 다운로드 중 오류 발생: {e}")
+                    continue  # 오류가 발생해도 다음 기사로 계속 진행
 
         # 최종 구조
         clustered_data[cluster_num] = {

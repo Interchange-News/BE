@@ -12,7 +12,8 @@ from flask_cors import CORS
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={
+     r"/*": {"origins": ["http://localhost:3000", "https://interchange.news"]}})
 
 DB_FILE = "../../news_clusters.db"  # SQLite 데이터베이스 파일 이름
 CSV_FILE = "../../final_result_preprocessed.csv"  # 저장된 클러스터링 결과 파일
@@ -160,5 +161,5 @@ if __name__ == '__main__':
     # scrape_news_content()
     # news_clustering()
     # save_to_db()  # 실행 시 DB 저장
-    # scheduled_task()
+    scheduled_task()
     app.run(host='0.0.0.0', use_reloader=False, port=os.getenv('PORT'))

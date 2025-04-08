@@ -1,99 +1,104 @@
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-import time
 import os
+import json
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+import boto3
 from dotenv import load_dotenv
-import random
-
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-}
+from botocore.config import Config
+import time
 load_dotenv()
 
-# 네이버 뉴스 검색 API 설정
-API_URL = "https://openapi.naver.com/v1/search/news.json"
+config = Config(
+    connect_timeout=10,
+    read_timeout=600  # 최대 10분 (600초)으로 설정
+)
+# Lambda 클라이언트 생성
+lambda_client = boto3.client(
+    'lambda', region_name='ap-southeast-2', config=config)
+# CloudWatch Logs 클라이언트 생성
+logs_client = boto3.client('logs', region_name='ap-southeast-2')
+
+# 호출할 Lambda 함수 이름
+function_name = 'icnews_scraping_docker'
+
+NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
+NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
+
+SEARCH_API_URL = "https://openapi.naver.com/v1/search/news.json"
 HEADERS = {
-    "X-Naver-Client-Id": os.getenv("NAVER_CLIENT_ID"),
-    "X-Naver-Client-Secret": os.getenv("NAVER_CLIENT_SECRET")
+    "User-Agent": "Mozilla/5.0",
+    "X-Naver-Client-Id": NAVER_CLIENT_ID,
+    "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
 }
-# 뉴스 데이터 저장 리스트
-news_data = []
+
+CRAWL_HEADERS = {
+    "User-Agent": HEADERS["User-Agent"]
+}
+
+SAVE_PATH = "../news_data_politic.csv"
+QUERY = "정치"
+MAX_LENGTH = 5000
+
+
+def get_news_list(start: int = 1, display: int = 100):
+    params = {
+        "query": QUERY,
+        "display": display,
+        "start": start,
+        "sort": "date"
+    }
+    response = requests.get(
+        SEARCH_API_URL, headers=HEADERS, params=params, timeout=10)
+    if response.status_code == 200:
+        return response.json().get("items", [])
+    else:
+        print(f"❌ 뉴스 검색 API 실패 - 상태코드: {response.status_code}")
+        return []
 
 
 def scrape_news_content():
+    all_data = []
     for start in range(1, 2001, 100):
-        params = {
-            "query": "정치",
-            "display": 100,
-            "start": start,
-            "sort": "date"
-        }
+        print(f"\n🔍 뉴스 검색 시작: {start} ~ {start+99}")
+        news_items = get_news_list(start)
 
-        response = requests.get(API_URL, headers=HEADERS, params=params)
+        start_time = time.time()
+        # Lambda 호출
+        response = lambda_client.invoke(
+            FunctionName=function_name,
+            InvocationType='RequestResponse',  # 동기 실행
+            Payload=json.dumps(
+                {"type": "news_items", "news_items": news_items})
+        )
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"🕒 크롤링 시간: {elapsed_time}초")
 
-        # API 응답이 정상인지 확인
-        if response.status_code == 200:
-            news_list = response.json().get("items", [])
+        result = json.loads(response['Payload'].read())
+        articles = json.loads(result['body'])
 
-            for news in news_list:
-                title = news["title"]  # 뉴스 제목
-                link = news["link"]  # 뉴스 링크
-                description = news['description']
+        for article in articles:
+            title = article['title']
+            content = article['article']
+            pressName = article['pressName']
+            originallink = article['originallink']
+            link = article['link']
+            pubDate = article['pubDate']
+            description = article['description']
 
-                # 네이버 뉴스만 크롤링
-                if link.startswith("https://n.news.naver.com"):
-                    try:
-                        # 네이버 뉴스 크롤링
-                        news_response = requests.get(
-                            link, headers=headers, timeout=10, allow_redirects=False)
-                        print(f"🔄 응답 코드: {response.status_code}")
-                        if news_response.status_code == 200:
-                            soup = BeautifulSoup(
-                                news_response.text, "html.parser")
+            all_data.append({
+                'title': title,
+                'article': content,
+                'pressName': pressName,
+                'originallink': originallink,
+                'link': link,
+                'pubDate': pubDate,
+                'description': description
+            })
 
-                            # ✅ 언론사 이름 크롤링
-                            press = soup.select_one(
-                                "a.media_end_head_top_logo img")
-                            press_name = press["alt"] if press else "언론사 정보 없음"
+    df = pd.DataFrame(all_data)
+    df.to_csv(SAVE_PATH, index=False, encoding="utf-8-sig")
+    print(f"\n🎉 총 {len(all_data)}건 크롤링 완료. 📁 '{SAVE_PATH}' 저장 완료!")
 
-                            # ✅ 뉴스 본문 크롤링
-                            article = soup.select_one("article#dic_area")
-                            article_text = article.get_text(
-                                strip=True, separator="\n") if article else "본문 없음"
-
-                            MAX_LENGTH = 5000
-                            if len(article_text) > MAX_LENGTH:
-                                # 1000자까지만 저장
-                                article_text = article_text[:MAX_LENGTH] + "..."
-
-                            # 데이터 저장
-                            news_data.append({
-                                "title": title,
-                                "article": article_text,
-                                "pressName": press_name,
-                                "originallink": news['originallink'],
-                                "link": news["link"],
-                                "pubDate": news['pubDate'],
-                                "description": description
-                            })
-
-                            print(f"✅ 크롤링 완료: {title} ({press_name})")
-                        else:
-                            print("크롤링 실패!!")
-                    except Exception as e:
-                        print(f"❌ 크롤링 실패: {link} - {e}")
-
-                time.sleep(0.1)  # 크롤링 간격 조정 (서버 차단 방지)
-        else:
-            print(f"❌ API 요청 실패! 상태 코드: {response.status_code}")
-
-    print(f"\n🎉 총 {len(news_data)}개의 뉴스 크롤링 완료!")
-
-    csv_filename = "../news_data_politic.csv"
-    df = pd.DataFrame(news_data)
-    df.to_csv(csv_filename, index=False, encoding="utf-8-sig")  # 한글 깨짐 방지
-
-    print(f"📂 데이터가 '{csv_filename}' 파일로 저장됨!")
-
-    return news_data
+    return all_data
