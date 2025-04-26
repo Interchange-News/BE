@@ -41,6 +41,10 @@ QUERY = "정치"
 MAX_LENGTH = 5000
 
 
+def safe_get(value):
+    return '' if value is None or pd.isna(value) else value
+
+
 def get_news_list(start: int = 1, display: int = 100):
     params = {
         "query": QUERY,
@@ -59,7 +63,7 @@ def get_news_list(start: int = 1, display: int = 100):
 
 def scrape_news_content():
     all_data = []
-    for start in range(1, 2001, 100):
+    for start in range(1, 1001, 100):
         print(f"\n🔍 뉴스 검색 시작: {start} ~ {start+99}")
         news_items = get_news_list(start)
 
@@ -79,13 +83,13 @@ def scrape_news_content():
         articles = json.loads(result['body'])
 
         for article in articles:
-            title = article['title']
-            content = article['article']
-            pressName = article['pressName']
-            originallink = article['originallink']
-            link = article['link']
-            pubDate = article['pubDate']
-            description = article['description']
+            title = safe_get(article['title'])
+            content = safe_get(article['article'])
+            pressName = safe_get(article['pressName'])
+            originallink = safe_get(article.get('originallink'))
+            link = safe_get(article['link'])
+            pubDate = safe_get(article['pubDate'])
+            description = safe_get(article['description'])
 
             all_data.append({
                 'title': title,
